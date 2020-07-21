@@ -13,6 +13,12 @@ import (
 	elastic "gopkg.in/olivere/elastic.v6"
 )
 
+var elasticIsUp bool
+
+func init() {
+	elasticIsUp = false
+}
+
 // SetupElastic sets up elastic conn
 func SetupElastic() {
 	if os.Getenv("PLATFORM_ENV") != "test" {
@@ -20,9 +26,10 @@ func SetupElastic() {
 	}
 
 	// Coming from Docker, sleep a few seconds to make sure ES is running
-	if elasticURL() == "http://elasticsearch:9200" {
+	if !elasticIsUp && elasticURL() == "http://elasticsearch:9200" {
 		logit.Info("Using docker, waiting for ES to spin up")
 		time.Sleep(10 * time.Second)
+		elasticIsUp = true
 	}
 	client, err := elastic.NewClient(elastic.SetURL(elasticURL()), elastic.SetSniff(sniff()))
 	if err != nil {
