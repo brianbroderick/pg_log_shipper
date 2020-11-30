@@ -8,10 +8,6 @@ import (
 // QUERY
 //******
 
-//******
-// Example: duration: 0.051 ms  execute <unnamed>: select * from servers where id IN ('1', '2', '3') and name = 'localhost'
-//******
-
 // QueryStatement allows you to converse with others in the same room
 type QueryStatement struct {
 	Duration     string
@@ -27,6 +23,10 @@ func (s *QueryStatement) String() string {
 
 	return buf.String()
 }
+
+//******
+// Example: duration: 0.051 ms  execute <unnamed>: select * from servers where id IN ('1', '2', '3') and name = 'localhost'
+//******
 
 // parseQueryStatement parses a query and returns a Statement AST object.
 // This function assumes the DURATION token has already been consumed.
@@ -51,11 +51,10 @@ func (p *Parser) parseQueryStatement() (*QueryStatement, error) {
 	}
 
 	tok, _, lit = p.ScanIgnoreWhitespace()
-	if tok != EXECUTE {
-		return nil, newParseError(tokstr(tok, lit), []string{"IDENT"}, pos)
-	}
 	stmt.PreparedStep = tok
 
+	// Loop over the Prepared Name and return the identity.
+	// Sometimes they are surrounded by <>, like <unnamed>, but ignore < & >.
 preparedLoop:
 	for {
 		tok, _, lit = p.ScanIgnoreWhitespace()
@@ -65,13 +64,14 @@ preparedLoop:
 		case COLON:
 			break preparedLoop
 		case EOF:
-			break preparedLoop
+			return stmt, nil
 		}
 	}
 
-	// Go past space
+	// Go past the space after the colon
 	_, _, _ = p.Scan()
 
+	// The rest is the query
 	_, _, stmt.Query = p.ScanSentence()
 
 	return stmt, nil
